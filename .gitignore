@@ -1,6 +1,22 @@
-__pycache__/
-*.py[cod]
-*.pkl
+# Virtual Environments
 .venv/
-.env
-.streamlit/secrets.toml
+venv/
+.venv311/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Streamlit cache
+.streamlit/
+
+# Temporary files
+temp/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
