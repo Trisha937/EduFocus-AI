@@ -7,6 +7,11 @@ import streamlit as st
 from utils.loader import get_document_info, load_pdf
 from utils.splitter import chunk_statistics, split_document
 
+from database.vector_store import (
+    create_and_save_vector_db,
+    load_local_vector_db,
+    retrieve_context_with_citations
+)
 
 st.set_page_config(page_title="EduFocus AI", page_icon="📚", layout="wide")
 
@@ -38,6 +43,24 @@ def main() -> None:
     """Run the Streamlit application for EduFocus AI."""
     uploaded_file = None
     uploaded_time = None
+    if "is_processed" not in st.session_state:
+        st.session_state.is_processed = False
+    if "doc_info" not in st.session_state:
+        st.session_state.doc_info = {}
+    if "stats" not in st.session_state:
+        st.session_state.stats = {}
+    if "first_chunk_preview" not in st.session_state:
+        st.session_state.first_chunk_preview = ""
+    if "first_chunk_metadata" not in st.session_state:
+        st.session_state.first_chunk_metadata = {}
+    if "vector_db" not in st.session_state:
+        st.session_state.vector_db = load_local_vector_db()
+    if "uploaded_file_name" not in st.session_state:
+        st.session_state.uploaded_file_name = ""
+    if "uploaded_file_size" not in st.session_state:
+        st.session_state.uploaded_file_size = 0
+    if "uploaded_time" not in st.session_state:
+        st.session_state.uploaded_time = ""    
 
     st.markdown(
         "<div style='padding: 0.4rem 0 1rem 0;'>"
@@ -66,6 +89,7 @@ def main() -> None:
         process_button = st.button("Process Document", type="primary", use_container_width=True)
         st.caption("Processing preserves metadata and creates chunk-ready output.")
 
+    # --- Step 1: Processing Logic ---
     if process_button:
         if uploaded_file is None:
             st.error("Please upload a PDF file before processing.")
@@ -119,6 +143,12 @@ def main() -> None:
                 if "page" not in first_chunk.metadata or "source" not in first_chunk.metadata:
                     st.error("Chunk metadata is missing required page or source information.")
                     return
+                
+
+                status_text.markdown("**Generating local vector database...**")
+                progress_bar.progress(0.8)
+                vector_db = create_and_save_vector_db(chunks)
+                st.session_state.vector_db = vector_db
 
                 status_text.markdown("**Saving processed data...**")
                 progress_bar.progress(0.9)
@@ -137,97 +167,135 @@ def main() -> None:
                 f"Details: {exc}"
             )
         else:
-            st.success(
-                "✅ Document processed successfully! The document has been prepared and is ready for vector indexing."
-            )
+            # Safely store execution results to state
+            st.session_state.is_processed = True
+            st.session_state.uploaded_file_name = uploaded_file.name
+            st.session_state.uploaded_file_size = uploaded_file.size
+            st.session_state.uploaded_time = uploaded_time
+            st.session_state.doc_info = document_info
+            st.session_state.stats = statistics
+            st.session_state.first_chunk_preview = format_preview_text(first_chunk.page_content)
+            st.session_state.first_chunk_metadata = first_chunk.metadata
+            st.rerun()
 
-            with st.container():
-                st.markdown("### 📊 Processing Summary")
-                st.caption("A concise view of the processed document and its preparation status.")
-                summary_cols = st.columns(2)
-                with summary_cols[0]:
-                    st.markdown(
-                        "**File Name**\n"
-                        f"{uploaded_file.name}"
-                    )
-                    st.markdown(
-                        "**File Size**\n"
-                        f"{format_file_size(uploaded_file.size)}"
-                    )
-                    st.markdown(
-                        "**Upload Time**\n"
-                        f"{uploaded_time}"
-                    )
-                with summary_cols[1]:
-                    st.markdown(
-                        "**Total Pages**\n"
-                        f"{document_info['total_pages']}"
-                    )
-                    st.markdown(
-                        "**Total Chunks**\n"
-                        f"{statistics['total_chunks']}"
-                    )
-                    st.markdown(
-                        "**Average Chunk Size**\n"
-                        f"{statistics['average_chunk_size']}"
-                    )
-                    st.markdown("**Processing Status**\nReady")
+    # --- Step 2: Main Interface Rendering Logic ---
+    if st.session_state.is_processed:
+        st.success(
+            "✅ Document processed successfully! The document has been prepared and is ready for vector indexing."
+        )
+        
+        with st.container():
+            st.markdown("### 📊 Processing Summary")
+            st.caption("A concise view of the processed document and its preparation status.")
+            summary_cols = st.columns(2)
+            with summary_cols[0]:
+                st.markdown(
+                    "**File Name**\n"
+                    f"{st.session_state.uploaded_file_name}"
+                )
+                st.markdown(
+                    "**File Size**\n"
+                    f"{format_file_size(st.session_state.uploaded_file_size)}"
+                )
+                st.markdown(
+                    "**Upload Time**\n"
+                    f"{st.session_state.uploaded_time}"
+                )
+            with summary_cols[1]:
+                st.markdown(
+                    "**Total Pages**\n"
+                    f"{st.session_state.doc_info['total_pages']}"
+                )
+                st.markdown(
+                    "**Total Chunks**\n"
+                    f"{st.session_state.stats['total_chunks']}"
+                )
+                st.markdown(
+                    "**Average Chunk Size**\n"
+                    f"{st.session_state.stats['average_chunk_size']}"
+                )
+                st.markdown("**Processing Status**\nReady")
 
-            st.divider()
-            st.markdown("## 📄 Document Information")
-            metric_columns = st.columns(4)
-            with metric_columns[0]:
-                st.metric("📄 Document", uploaded_file.name)
-            with metric_columns[1]:
-                st.metric("📚 Pages", document_info["total_pages"])
-            with metric_columns[2]:
-                st.metric("🧩 Chunks", statistics["total_chunks"])
-            with metric_columns[3]:
-                st.metric("📏 Avg Chunk Size", statistics["average_chunk_size"])
+        st.divider()
+        st.markdown("## 📄 Document Information")
+        metric_columns = st.columns(4)
+        with metric_columns[0]:
+            st.metric("📄 Document", st.session_state.uploaded_file_name)
+        with metric_columns[1]:
+            st.metric("📚 Pages", st.session_state.doc_info["total_pages"])
+        with metric_columns[2]:
+            st.metric("🧩 Chunks", st.session_state.stats["total_chunks"])
+        with metric_columns[3]:
+            st.metric("📏 Avg Chunk Size", st.session_state.stats["average_chunk_size"])
 
-            st.divider()
-            st.markdown("## 🔍 Metadata Preview")
-            st.caption("This metadata will later be used to generate page citations.")
-            with st.expander("View metadata", expanded=False):
-                st.json(first_chunk.metadata)
+        st.divider()
+        st.markdown("## 🔍 Metadata Preview")
+        st.caption("This metadata will later be used to generate page citations.")
+        with st.expander("View metadata", expanded=False):
+            st.json(st.session_state.first_chunk_metadata)
 
-            st.divider()
-            st.markdown("## 📄 First Chunk Preview")
-            st.caption("The first chunk is shown below for inspection and validation.")
-            with st.container():
-                preview_text = format_preview_text(first_chunk.page_content)
-                st.code(preview_text, language="text")
+        st.divider()
+        st.markdown("## 📄 First Chunk Preview")
+        st.caption("The first chunk is shown below for inspection and validation.")
+        with st.container():
+            st.code(st.session_state.first_chunk_preview, language="text")
 
-            st.divider()
-            chunks_path = Path("temp/chunks.pkl")
-            if chunks_path.exists():
-                with chunks_path.open("rb") as handle:
-                    st.download_button(
-                        label="📥 Download Processed Chunks",
-                        data=handle,
-                        file_name="chunks.pkl",
-                        mime="application/octet-stream",
-                    )
+        st.divider()
+        chunks_path = Path("temp/chunks.pkl")
+        if chunks_path.exists():
+            with chunks_path.open("rb") as handle:
+                st.download_button(
+                    label="📥 Download Processed Chunks",
+                    data=handle,
+                    file_name="chunks.pkl",
+                    mime="application/octet-stream",
+                )
 
-            st.divider()
-            st.markdown("## ✅ Project Status")
-            st.markdown("- ✅ PDF Loading Complete")
-            st.markdown("- ✅ Metadata Preserved")
-            st.markdown("- ✅ Document Chunking Complete")
-            st.markdown("- ✅ Statistics Generated")
-            st.markdown("- ✅ Ready for Embedding Stage")
+        st.divider()
+        st.markdown("## ✅ Project Status")
+        st.markdown("- ✅ PDF Loading Complete")
+        st.markdown("- ✅ Metadata Preserved")
+        st.markdown("- ✅ Document Chunking Complete")
+        st.markdown("- ✅ Statistics Generated")
+        st.markdown("- ✅ Ready for Embedding Stage")
 
-            st.divider()
-            st.markdown(
-                "<div style='text-align: center; padding: 1.2rem 0 0.5rem 0; color: #6b7280;'>"
-                "<h4 style='margin-bottom: 0.2rem;'>EduFocus AI</h4>"
-                "<p style='margin: 0.1rem 0;'>Capstone Project</p>"
-                "<p style='margin: 0.25rem 0 0;'>Member 1: Document Ingestion & Metadata Pipeline</p>"
-                "<p style='margin-top: 0.5rem;'>Built with<br>• Streamlit<br>• LangChain<br>• PyPDFLoader</p>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
+        st.divider()
+        st.markdown("## 🔍 Semantic Document Search")
+        st.caption("Ask questions about this document to retrieve context and page citations.")
+        
+        user_query = st.text_input(
+            "What information are you looking for in this document?",
+            placeholder="e.g., What are the grading rules or schedule policies?",
+            key="doc_search_query"
+        )
+
+        if user_query:
+            if st.session_state.vector_db is not None:
+                with st.spinner("Searching local FAISS index..."):
+                    context, pages = retrieve_context_with_citations(user_query, st.session_state.vector_db)
+                    
+                    if context:
+                        st.success("Matching content retrieved!")
+                        st.markdown(f"**📚 Source References:** Page(s) `{', '.join(map(str, pages))}`")
+                        with st.expander("📖 View Retrieved Text Fragment", expanded=True):
+                            st.write(context)
+                    else:
+                        st.warning("No matches found. Try matching key terms in your query.")
+            else:
+                st.error("Database is not initialized. Try re-processing the document.")
+
+        st.divider()
+        st.markdown(
+            "<div style='text-align: center; padding: 1.2rem 0 0.5rem 0; color: #6b7280;'>"
+            "<h4 style='margin-bottom: 0.2rem;'>EduFocus AI</h4>"
+            "<p style='margin: 0.1rem 0;'>Capstone Project</p>"
+            "<p style='margin: 0.25rem 0 0;'>Member 1: Document Ingestion & Metadata Pipeline</p>"
+            "<p style='margin-top: 0.5rem;'>Built with<br>• Streamlit<br>• LangChain<br>• PyPDFLoader</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
     else:
+        # Shown only if no document has been processed yet
         with st.container():
             st.markdown(
                 "<div style='text-align: center; padding: 2rem 1rem; border: 1px solid #e5e7eb; border-radius: 14px; background: #f9fafb;'>"
