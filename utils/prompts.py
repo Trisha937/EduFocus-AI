@@ -87,7 +87,7 @@ def get_system_prompt(learning_level: str) -> str:
 # ============================================================================
 
 def format_quiz_prompt(context: str, num_questions: int = 5) -> str:
-    """Format the prompt for quiz generation.
+    """Format the prompt for quiz generation using llama-3.3-70b-versatile.
 
     Args:
         context: Retrieved document chunks to base quiz on.
@@ -96,8 +96,31 @@ def format_quiz_prompt(context: str, num_questions: int = 5) -> str:
     Returns:
         Formatted prompt for quiz generation.
     """
-    # Placeholder implementation - to be completed in Milestone 2
-    return ""
+    prompt = f"""You are an educational quiz generator. Create exactly {num_questions} multiple-choice
+questions based solely on the provided document context.
+
+CONTEXT:
+{context}
+
+OUTPUT FORMAT (strict JSON, no additional text):
+{{
+    "questions": [
+        {{
+            "question": "Question text here",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "correct_answer": "Correct option letter (A, B, C, or D)"
+        }}
+    ]
+}}
+
+RULES:
+1. Generate exactly {num_questions} questions
+2. Each question must have exactly 4 options
+3. The correct_answer must be a single letter (A, B, C, or D)
+4. All questions must be answerable from the provided context
+5. Do NOT include any text outside the JSON structure
+"""
+    return prompt
 
 
 def parse_quiz_response(response: str) -> dict:
@@ -107,10 +130,32 @@ def parse_quiz_response(response: str) -> dict:
         response: Raw LLM response containing quiz JSON.
 
     Returns:
-        Parsed quiz dictionary.
+        Parsed quiz dictionary with questions list.
     """
-    # Placeholder implementation - to be completed in Milestone 2
-    return {"questions": []}
+    import json
+
+    try:
+        # Extract JSON from response (in case LLM adds extra text)
+        response_text = response.strip()
+
+        # Find JSON object boundaries
+        start_idx = response_text.find("{")
+        end_idx = response_text.rfind("}") + 1
+
+        if start_idx == -1 or end_idx == 0:
+            return {"questions": [], "error": "No valid JSON found in response"}
+
+        json_str = response_text[start_idx:end_idx]
+        parsed = json.loads(json_str)
+
+        # Validate structure
+        if "questions" not in parsed:
+            return {"questions": [], "error": "Missing 'questions' key in response"}
+
+        return parsed
+
+    except json.JSONDecodeError as e:
+        return {"questions": [], "error": f"JSON parsing failed: {str(e)}"}
 
 
 # ============================================================================
