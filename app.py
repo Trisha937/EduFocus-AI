@@ -8,7 +8,7 @@ from utils.chat_engine import get_page_citations, stream_chat_response
 from utils.chat_memory import add_message
 from utils.embeddings import get_embeddings_model
 from utils.loader import get_document_info, load_pdf
-from utils.prompts import get_system_prompt
+from utils.prompts import get_system_prompt, format_quiz_prompt
 from utils.splitter import chunk_statistics, split_document
 from utils.vector_store import create_vector_store, retrieve_similar_chunks, save_vector_store
 
@@ -218,6 +218,15 @@ def main() -> None:
             st.session_state.first_chunk_metadata = first_chunk.metadata
             st.rerun()
 
+    # --- Step 1.5: Learning Level Selector ---
+    if st.session_state.is_processed:
+        st.session_state.learning_level = st.selectbox(
+            "🎓 Learning Level",
+            options=["Beginner", "Intermediate"],
+            index=0,
+            help="Beginner: Simple explanations with analogies | Intermediate: Technical academic terminology"
+        )
+
     # --- Step 2: Main Interface Rendering Logic ---
     if st.session_state.is_processed:
         st.success(
@@ -321,7 +330,7 @@ def main() -> None:
                         if not retrieved_chunks:
                             raise ValueError("No relevant document chunks were found.")
 
-                        system_prompt = get_system_prompt("Beginner") or "You are an academic assistant helping a student understand the uploaded document."
+                        system_prompt = get_system_prompt(st.session_state.learning_level) or "You are an academic assistant helping a student understand the uploaded document."
                         response_placeholder = st.empty()
                         full_response = ""
                         for token in stream_chat_response(
@@ -358,10 +367,69 @@ def main() -> None:
             st.markdown("- ✅ Statistics Generated")
             st.markdown("- ✅ Chat Module Connected")
 
+        # ============================================================================
+# QUIZ DASHBOARD
+# ============================================================================
+
+        st.divider()
+        st.markdown("## 📝 Interactive Quiz Dashboard")
+        st.caption("Test your knowledge with AI-generated questions based on the document.")
+
+        # Initialize quiz state
+        if "quiz_data" not in st.session_state:
+            st.session_state.quiz_data = {"questions": []}
+        if "user_answers" not in st.session_state:
+            st.session_state.user_answers = {}
+        if "quiz_generated" not in st.session_state:
+            st.session_state.quiz_generated = False
+
+        quiz_form = st.form("quiz_form")
+        with quiz_form:
+            generate_col, _ = st.columns([2, 3])
+            with generate_col:
+                generate_quiz = st.form_submit_button("🔄 Generate Quiz", type="primary")
+
+            if generate_quiz:
+                if st.session_state.vector_db is not None:
+                    with st.spinner("Generating quiz questions..."):
+                        # Retrieve context for quiz generation
+                        quiz_context, _ = retrieve_context_with_citations(
+                            "Generate questions covering main concepts",
+                            st.session_state.vector_db
+                        )
+
+                        if quiz_context:
+                            quiz_prompt = format_quiz_prompt(quiz_context, 5)
+                            st.info("Quiz prompt prepared. Connect to Groq llama-3.3-70b-versatile for generation.")
+                        else:
+                            st.warning("Could not generate quiz - no document context available.")
+                else:
+                    st.error("Please process a document first to generate a quiz.")
+
+        # Display quiz questions if available
+        if st.session_state.quiz_data.get("questions"):
+            with st.form("quiz_answers_form"):
+                for i, q in enumerate(st.session_state.quiz_data["questions"]):
+                    st.markdown(f"**Question {i+1}:** {q['question']}")
+
+                    # Radio buttons for options
+                    answer_key = f"q_{i}"
+                    selected = st.radio(
+                        f"Select answer for Q{i+1}",
+                        options=["A", "B", "C", "D"],
+                        format_func=lambda x: f"{x}) {q['options'][ord(x)-65]}",
+                        key=answer_key,
+                        horizontal=True
+                    )
+
+                submitted = st.form_submit_button("Check Answers")
+                if submitted:
+                    st.success("Answers submitted! (Scoring logic to be implemented)")
+
         st.divider()
         st.markdown("## 🔍 Semantic Document Search")
         st.caption("Ask questions about this document to retrieve context and page citations.")
-        
+
         user_query = st.text_input(
             "What information are you looking for in this document?",
             placeholder="e.g., What are the grading rules or schedule policies?",
@@ -372,7 +440,7 @@ def main() -> None:
             if st.session_state.vector_db is not None:
                 with st.spinner("Searching local FAISS index..."):
                     context, pages = retrieve_context_with_citations(user_query, st.session_state.vector_db)
-                    
+
                     if context:
                         st.success("Matching content retrieved!")
                         st.markdown(f"**📚 Source References:** Page(s) `{', '.join(map(str, pages))}`")
