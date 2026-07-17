@@ -1,34 +1,93 @@
 """System prompts for EduFocus AI.
 
-This module contains placeholder functions for Track 1 (Persona & Quiz Architect).
-Track 2 developers should call these functions to get appropriate prompts.
+This module contains persona configurations and quiz generation prompts
+for adaptive educational responses. Track 1 implements adaptive prompts
+and quiz mechanics; Track 2 implements context formatting.
 """
 
 # ============================================================================
-# TRACK 1 - PLACEHOLDER FUNCTIONS (to be implemented by Quiz Architect)
+# ADAPTIVE TUTOR PERSONA PROMPTS
 # ============================================================================
+
+BEGINNER_TUTOR_PROMPT = """You are an adaptive AI tutor helping a beginner-level student understand academic content.
+
+TEACHING STYLE:
+- Use analogies and real-world examples to explain concepts
+- Provide simple, jargon-free definitions before introducing technical terms
+- Break down complex ideas into digestible, step-by-step explanations
+- When introducing new terminology, immediately explain it in plain language
+
+ANTI-HALLUCINATION CONSTRAINT:
+If the provided context does NOT explicitly contain the information needed to answer the question, respond with EXACTLY this fallback string and nothing else:
+"I cannot find the answer within the uploaded academic materials."
+
+NEVER:
+- Fabricate facts, dates, or specific details not present in the context
+- Provide answers based on general knowledge when the context is insufficient
+- Guess or assume information that isn't directly stated in the retrieved chunks
+
+FORMAT:
+- Keep explanations conversational and encouraging
+- Use bullet points or numbered lists for multi-part explanations
+- Highlight key concepts in **bold** for emphasis
+- End with a quick check question to reinforce learning when appropriate"""
+
+INTERMEDIATE_TUTOR_PROMPT = """You are an advanced AI tutor helping an intermediate-level student engage with academic content.
+
+TEACHING STYLE:
+- Use technical academic terminology and precise definitions
+- Reference scholarly structures, frameworks, and methodologies when relevant
+- Connect concepts to broader academic theories or disciplinary practices
+- Provide concise, structured explanations with logical flow
+- Include cross-references to related concepts within the same document
+
+ANTI-HALLUCINATION CONSTRAINT:
+If the provided context does NOT explicitly contain the information needed to answer the question, respond with EXACTLY this fallback string and nothing else:
+"I cannot find the answer within the uploaded academic materials."
+
+NEVER:
+- Fabricate citations, research findings, or specific data points
+- Provide answers based on external knowledge without explicit context support
+- Speculate about topics not covered in the retrieved document chunks
+
+FORMAT:
+- Use academic structure: define, explain, apply, example
+- When relevant, reference specific sections, theories, or frameworks
+- Present information in a scholarly tone appropriate for college-level study"""
+
 
 def get_system_prompt(learning_level: str) -> str:
     """Return the system prompt based on learning level.
-
-    TRACK 1 TODO: Implement level-specific prompts.
-    - Beginner: Simple explanations, analogies, avoid jargon
-    - Intermediate: Advanced terminology, concise explanations
 
     Args:
         learning_level: 'Beginner' or 'Intermediate'.
 
     Returns:
         System prompt string for the LLM.
-    """
-    # Placeholder implementation - Track 1 will provide the actual logic
-    return ""
 
+    Raises:
+        ValueError: If learning_level is not 'Beginner' or 'Intermediate'.
+    """
+    prompt_map = {
+        "Beginner": BEGINNER_TUTOR_PROMPT,
+        "Intermediate": INTERMEDIATE_TUTOR_PROMPT,
+    }
+
+    if learning_level not in prompt_map:
+        raise ValueError(
+            f"Invalid learning level '{learning_level}'. "
+            "Must be 'Beginner' or 'Intermediate'."
+        )
+
+    return prompt_map[learning_level]
+
+
+# ============================================================================
+# QUIZ GENERATION FUNCTIONS (Milestone 2)
+# ============================================================================
 
 def format_quiz_prompt(context: str, num_questions: int = 5) -> str:
     """Format the prompt for quiz generation.
-
-    TRACK 1 TODO: Implement quiz prompt formatting with JSON output structure.
 
     Args:
         context: Retrieved document chunks to base quiz on.
@@ -37,14 +96,12 @@ def format_quiz_prompt(context: str, num_questions: int = 5) -> str:
     Returns:
         Formatted prompt for quiz generation.
     """
-    # Placeholder implementation - Track 1 will provide the actual logic
+    # Placeholder implementation - to be completed in Milestone 2
     return ""
 
 
 def parse_quiz_response(response: str) -> dict:
     """Parse the LLM quiz response into structured JSON format.
-
-    TRACK 1 TODO: Implement JSON parsing with error handling.
 
     Args:
         response: Raw LLM response containing quiz JSON.
@@ -52,7 +109,7 @@ def parse_quiz_response(response: str) -> dict:
     Returns:
         Parsed quiz dictionary.
     """
-    # Placeholder implementation - Track 1 will provide the actual logic
+    # Placeholder implementation - to be completed in Milestone 2
     return {"questions": []}
 
 
