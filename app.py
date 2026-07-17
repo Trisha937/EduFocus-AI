@@ -4,11 +4,31 @@ from pathlib import Path
 
 import streamlit as st
 
+from utils.chat_engine import get_page_citations, stream_chat_response
+from utils.chat_memory import add_message
+from utils.embeddings import get_embeddings_model
 from utils.loader import get_document_info, load_pdf
+from utils.prompts import get_system_prompt
 from utils.splitter import chunk_statistics, split_document
+from utils.vector_store import create_vector_store, retrieve_similar_chunks, save_vector_store
 
 
-st.set_page_config(page_title="EduFocus AI", page_icon="📚", layout="wide")
+def get_default_chat_state() -> dict[str, object]:
+    """Return the default session state structure for the chat experience."""
+    return {
+        "chat_messages": [],
+        "chat_history": [],
+        "vector_store": None,
+        "source_file": None,
+    }
+
+
+def initialize_chat_session_state() -> None:
+    """Ensure the Streamlit session state contains the chat state keys."""
+    defaults = get_default_chat_state()
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 def save_chunks(chunks, output_path: Path) -> None:
@@ -36,6 +56,9 @@ def format_preview_text(text: str, limit: int = 500) -> str:
 
 def main() -> None:
     """Run the Streamlit application for EduFocus AI."""
+    st.set_page_config(page_title="EduFocus AI", page_icon="📚", layout="wide")
+    initialize_chat_session_state()
+
     uploaded_file = None
     uploaded_time = None
 
@@ -76,6 +99,11 @@ def main() -> None:
             return
 
         uploaded_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state.chat_messages = []
+        st.session_state.chat_history = []
+        st.session_state.vector_store = None
+        st.session_state.source_file = None
+
         temp_dir = Path("temp")
         temp_dir.mkdir(exist_ok=True)
         temp_pdf_path = temp_dir / uploaded_file.name
@@ -123,6 +151,18 @@ def main() -> None:
                 status_text.markdown("**Saving processed data...**")
                 progress_bar.progress(0.9)
                 save_chunks(chunks, temp_dir / "chunks.pkl")
+
+                try:
+                    embeddings_model = get_embeddings_model()
+                    vector_store = create_vector_store(chunks, embeddings_model)
+                    save_vector_store(vector_store)
+                    st.session_state.vector_store = vector_store
+                    st.session_state.source_file = uploaded_file.name
+                except Exception as exc:  # pragma: no cover - graceful fallback for local indexing
+                    st.session_state.vector_store = None
+                    st.session_state.source_file = uploaded_file.name
+                    st.warning(f"The document was processed, but chat indexing could not be built: {exc}")
+
                 statistics = chunk_statistics(chunks)
                 progress_bar.progress(1.0)
                 status_text.markdown("**Completed**")
@@ -210,12 +250,71 @@ def main() -> None:
                     )
 
             st.divider()
+            st.markdown("## 💬 Chat with the Document")
+            st.caption("Ask questions about the uploaded PDF using the indexed chunks and the built-in RAG flow.")
+
+            for message in st.session_state.chat_messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+            if st.session_state.vector_store is None:
+                st.info("The chat index is not available yet. The document was processed, but the embedding/indexing step could not be completed.")
+            else:
+                st.info("The chat module is ready. Ask a question about the document below.")
+
+            prompt = st.chat_input("Ask a question about the uploaded PDF")
+            if prompt:
+                st.session_state.chat_messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+
+                if st.session_state.vector_store is None:
+                    response = "The document index is not ready yet. Please reprocess the PDF or check the embedding setup."
+                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    with st.chat_message("assistant"):
+                        st.markdown(response)
+                else:
+                    try:
+                        retrieved_chunks = retrieve_similar_chunks(st.session_state.vector_store, prompt, k=4)
+                        if not retrieved_chunks:
+                            raise ValueError("No relevant document chunks were found.")
+
+                        system_prompt = get_system_prompt("Beginner") or "You are an academic assistant helping a student understand the uploaded document."
+                        response_placeholder = st.empty()
+                        full_response = ""
+                        for token in stream_chat_response(
+                            query=prompt,
+                            chat_history=st.session_state.chat_history,
+                            retrieved_chunks=retrieved_chunks,
+                            system_prompt=system_prompt,
+                            source_file=st.session_state.source_file or uploaded_file.name,
+                        ):
+                            full_response += token
+                            response_placeholder.markdown(full_response + "▌")
+
+                        response_placeholder.markdown(full_response)
+                        citations = get_page_citations(retrieved_chunks)
+                        if citations:
+                            st.caption(f"Sources: Pages {', '.join(map(str, citations))}")
+
+                        st.session_state.chat_history = add_message(st.session_state.chat_history, "human", prompt)
+                        st.session_state.chat_history = add_message(st.session_state.chat_history, "ai", full_response)
+                        st.session_state.chat_messages.append({"role": "assistant", "content": full_response})
+                        with st.chat_message("assistant"):
+                            st.markdown(full_response)
+                    except Exception as exc:
+                        error_response = f"I could not generate a response right now: {exc}"
+                        st.session_state.chat_messages.append({"role": "assistant", "content": error_response})
+                        with st.chat_message("assistant"):
+                            st.markdown(error_response)
+
+            st.divider()
             st.markdown("## ✅ Project Status")
             st.markdown("- ✅ PDF Loading Complete")
             st.markdown("- ✅ Metadata Preserved")
             st.markdown("- ✅ Document Chunking Complete")
             st.markdown("- ✅ Statistics Generated")
-            st.markdown("- ✅ Ready for Embedding Stage")
+            st.markdown("- ✅ Chat Module Connected")
 
             st.divider()
             st.markdown(

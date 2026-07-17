@@ -20,3 +20,15 @@ temp/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Environment secrets - NEVER commit real API keys
+.env
+
+# Pickled data (document chunks) - not needed in repo
+*.pkl
+chunks.pkl
+
+# FAISS vector database artifacts generated at runtime
+vector_db/
+*.faiss
+*.pkl
