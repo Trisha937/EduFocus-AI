@@ -119,6 +119,8 @@ RULES:
 3. The correct_answer must be a single letter (A, B, C, or D)
 4. All questions must be answerable from the provided context
 5. Do NOT include any text outside the JSON structure
+6. Vary question types: mix factual, analytical, and conceptual questions.
+    7. Focus on different aspects of the context each time.
 """
     return prompt
 
@@ -182,7 +184,8 @@ def format_context_with_citations(chunks: list, source_file: str) -> str:
         page_num = chunk.metadata.get("page", 0)
         # Add +1 to convert 0-indexed FAISS page numbers to 1-indexed for users
         # Users think "Page 1" not "Page 0"
-        formatted_parts.append(f"[Page {page_num + 1}]\n{chunk.page_content}")
+        # Include source file for LLM reference
+        formatted_parts.append(f"[Source: {source_file}, Page {page_num + 1}]\n{chunk.page_content}")
 
     return "\n\n".join(formatted_parts)
 

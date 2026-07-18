@@ -356,8 +356,6 @@ def main() -> None:
                         st.session_state.chat_history = add_message(st.session_state.chat_history, "human", prompt)
                         st.session_state.chat_history = add_message(st.session_state.chat_history, "ai", full_response)
                         st.session_state.chat_messages.append({"role": "assistant", "content": full_response})
-                        with st.chat_message("assistant"):
-                            st.markdown(full_response)
                     except Exception as exc:
                         error_response = f"I could not generate a response right now: {exc}"
                         st.session_state.chat_messages.append({"role": "assistant", "content": error_response})
@@ -372,141 +370,148 @@ def main() -> None:
             st.markdown("- ✅ Statistics Generated")
             st.markdown("- ✅ Chat Module Connected")
 
-# ============================================================================
-# QUIZ DASHBOARD
-# ============================================================================
+            # ============================================================================
+            # QUIZ DASHBOARD
+            # ============================================================================
 
-        st.divider()
-        st.markdown("## 📝 Interactive Quiz Dashboard")
-        st.caption("Test your knowledge with AI-generated questions based on the document.")
+            st.divider()
+            st.markdown("## 📝 Interactive Quiz Dashboard")
+            st.caption("Test your knowledge with AI-generated questions based on the document.")
 
-        # Initialize quiz state
-        if "quiz_data" not in st.session_state:
-            st.session_state.quiz_data = {"questions": []}
-        if "user_answers" not in st.session_state:
-            st.session_state.user_answers = {}
-        if "quiz_generated" not in st.session_state:
-            st.session_state.quiz_generated = False
+            # Initialize quiz state
+            if "quiz_data" not in st.session_state:
+                st.session_state.quiz_data = {"questions": []}
+            if "user_answers" not in st.session_state:
+                st.session_state.user_answers = {}
+            if "quiz_generated" not in st.session_state:
+                st.session_state.quiz_generated = False
 
-        quiz_form = st.form("quiz_form")
-        with quiz_form:
-            generate_col, _ = st.columns([2, 3])
-            with generate_col:
-                generate_quiz = st.form_submit_button("🔄 Generate Quiz", type="primary")
+            quiz_form = st.form("quiz_form")
+            with quiz_form:
+                generate_col, _ = st.columns([2, 3])
+                with generate_col:
+                    generate_quiz = st.form_submit_button("🔄 Generate Quiz", type="primary")
 
-            if generate_quiz:
-                if st.session_state.vector_db is not None:
-                    with st.spinner("Generating quiz questions..."):
-                        # Retrieve context for quiz generation
-                        quiz_context, _ = retrieve_context_with_citations(
-                            "Generate questions covering main concepts",
-                            st.session_state.vector_db,
+                if generate_quiz:
+                    if st.session_state.vector_db is not None:
+                        with st.spinner("Generating quiz questions..."):
+                            # Retrieve context for quiz generation
+                            import random
+                            random_queries = [
+                                "Extract key facts and figures for quiz questions",
+                                "Identify important concepts for learning assessment",
+                                "Find critical definitions and principles to test",
+                                "Retrieve core arguments and evidence for questioning",
+                            ]
+                            quiz_context, _ = retrieve_context_with_citations(
+                                random.choice(random_queries),  # RANDOM QUERY
+                                st.session_state.vector_db,
+                            )
+
+                            if quiz_context:
+                                quiz_prompt = format_quiz_prompt(quiz_context, 5)
+
+                                try:
+                                    # Initialize Groq Client
+                                    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+                                    # Request structured JSON payload matching your UI format
+                                    completion = client.chat.completions.create(
+                                        model="llama-3.3-70b-versatile",
+                                        messages=[
+                                            {
+                                                "role": "system",
+                                                "content": (
+                                                    "You are an evaluator. You must output raw JSON ONLY. "
+                                                    "Follow this schema precisely: {\"questions\": [{\"question\": \"...\", "
+                                                    "\"options\": [\"Ans A\", \"Ans B\", \"Ans C\", \"Ans D\"], "
+                                                    "\"answer\": \"A\"}]}"
+                                                ),
+                                            },
+                                            {"role": "user", "content": quiz_prompt},
+                                        ],
+                                        temperature=0.7,
+                                        response_format={"type": "json_object"},
+                                    )
+
+                                    # Parse out JSON and store into session state
+                                    parsed_quiz = json.loads(completion.choices[0].message.content)
+                                    st.session_state.quiz_data = parsed_quiz
+                                    st.session_state.quiz_generated = True
+                                    st.rerun()
+
+                                except Exception as exc:
+                                    st.error(f"Failed to generate quiz from Groq: {exc}")
+                            else:
+                                st.warning("Could not generate quiz - no document context available.")
+                    else:
+                        st.error("Please process a document first to generate a quiz.")
+
+            # Display quiz questions if available
+            if st.session_state.quiz_data.get("questions"):
+                with st.form("quiz_answers_form"):
+                    correct_answers = {}
+                    for i, q in enumerate(st.session_state.quiz_data["questions"]):
+                        st.markdown(f"**Question {i+1}:** {q['question']}")
+                        correct_answers[i] = q.get('answer', 'A')
+
+                        # Radio buttons for options
+                        answer_key = f"q_{i}"
+                        st.radio(
+                            f"Select answer for Q{i+1}",
+                            options=["A", "B", "C", "D"],
+                            format_func=lambda x: f"{x}) {q['options'][ord(x)-65]}",
+                            key=answer_key,
+                            horizontal=True
                         )
 
-                        if quiz_context:
-                            quiz_prompt = format_quiz_prompt(quiz_context, 5)
+                    submitted = st.form_submit_button("Check Answers")
+                    if submitted:
+                        score = 0
+                        total = len(st.session_state.quiz_data["questions"])
+                        
+                        for i in range(total):
+                            user_pick = st.session_state.get(f"q_{i}")
+                            if user_pick == correct_answers[i]:
+                                score += 1
+                        
+                        st.success(f"Quiz Evaluation Complete! Your score: {score}/{total}")
 
-                            try:
-                                # Initialize Groq Client
-                                client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+            st.divider()
+            st.markdown("## 🔍 Semantic Document Search")
+            st.caption("Ask questions about this document to retrieve context and page citations.")
 
-                                # Request structured JSON payload matching your UI format
-                                completion = client.chat.completions.create(
-                                    model="llama-3.3-70b-versatile",
-                                    messages=[
-                                        {
-                                            "role": "system",
-                                            "content": (
-                                                "You are an evaluator. You must output raw JSON ONLY. "
-                                                "Follow this schema precisely: {\"questions\": [{\"question\": \"...\", "
-                                                "\"options\": [\"Ans A\", \"Ans B\", \"Ans C\", \"Ans D\"], "
-                                                "\"answer\": \"A\"}]}"
-                                            ),
-                                        },
-                                        {"role": "user", "content": quiz_prompt},
-                                    ],
-                                    temperature=0.3,
-                                    response_format={"type": "json_object"},
-                                )
+            user_query = st.text_input(
+                "What information are you looking for in this document?",
+                placeholder="e.g., What are the grading rules or schedule policies?",
+                key="doc_search_query"
+            )
 
-                                # Parse out JSON and store into session state
-                                parsed_quiz = json.loads(completion.choices[0].message.content)
-                                st.session_state.quiz_data = parsed_quiz
-                                st.session_state.quiz_generated = True
-                                st.rerun()
+            if user_query:
+                if st.session_state.vector_db is not None:
+                    with st.spinner("Searching local FAISS index..."):
+                        context, pages = retrieve_context_with_citations(user_query, st.session_state.vector_db)
 
-                            except Exception as exc:
-                                st.error(f"Failed to generate quiz from Groq: {exc}")
+                        if context:
+                            st.success("Matching content retrieved!")
+                            st.markdown(f"**📚 Source References:** Page(s) `{', '.join(map(str, pages))}`")
+                            with st.expander("📖 View Retrieved Text Fragment", expanded=True):
+                                st.write(context)
                         else:
-                            st.warning("Could not generate quiz - no document context available.")
+                            st.warning("No matches found. Try matching key terms in your query.")
                 else:
-                    st.error("Please process a document first to generate a quiz.")
+                    st.error("Database is not initialized. Try re-processing the document.")
 
-        # Display quiz questions if available
-        if st.session_state.quiz_data.get("questions"):
-            with st.form("quiz_answers_form"):
-                correct_answers = {}
-                for i, q in enumerate(st.session_state.quiz_data["questions"]):
-                    st.markdown(f"**Question {i+1}:** {q['question']}")
-                    correct_answers[i] = q.get('answer', 'A')
-
-                    # Radio buttons for options
-                    answer_key = f"q_{i}"
-                    st.radio(
-                        f"Select answer for Q{i+1}",
-                        options=["A", "B", "C", "D"],
-                        format_func=lambda x: f"{x}) {q['options'][ord(x)-65]}",
-                        key=answer_key,
-                        horizontal=True
-                    )
-
-                submitted = st.form_submit_button("Check Answers")
-                if submitted:
-                    score = 0
-                    total = len(st.session_state.quiz_data["questions"])
-                    
-                    for i in range(total):
-                        user_pick = st.session_state.get(f"q_{i}")
-                        if user_pick == correct_answers[i]:
-                            score += 1
-                    
-                    st.success(f"Quiz Evaluation Complete! Your score: {score}/{total}")
-
-        st.divider()
-        st.markdown("## 🔍 Semantic Document Search")
-        st.caption("Ask questions about this document to retrieve context and page citations.")
-
-        user_query = st.text_input(
-            "What information are you looking for in this document?",
-            placeholder="e.g., What are the grading rules or schedule policies?",
-            key="doc_search_query"
-        )
-
-        if user_query:
-            if st.session_state.vector_db is not None:
-                with st.spinner("Searching local FAISS index..."):
-                    context, pages = retrieve_context_with_citations(user_query, st.session_state.vector_db)
-
-                    if context:
-                        st.success("Matching content retrieved!")
-                        st.markdown(f"**📚 Source References:** Page(s) `{', '.join(map(str, pages))}`")
-                        with st.expander("📖 View Retrieved Text Fragment", expanded=True):
-                            st.write(context)
-                    else:
-                        st.warning("No matches found. Try matching key terms in your query.")
-            else:
-                st.error("Database is not initialized. Try re-processing the document.")
-
-        st.divider()
-        st.markdown(
-            "<div style='text-align: center; padding: 1.2rem 0 0.5rem 0; color: #6b7280;'>"
-            "<h4 style='margin-bottom: 0.2rem;'>EduFocus AI</h4>"
-            "<p style='margin: 0.1rem 0;'>Capstone Project</p>"
-            "<p style='margin: 0.25rem 0 0;'>Member 1: Document Ingestion & Metadata Pipeline</p>"
-            "<p style='margin-top: 0.5rem;'>Built with<br>• Streamlit<br>• LangChain<br>• PyPDFLoader</p>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
+            st.divider()
+            st.markdown(
+                "<div style='text-align: center; padding: 1.2rem 0 0.5rem 0; color: #6b7280;'>"
+                "<h4 style='margin-bottom: 0.2rem;'>EduFocus AI</h4>"
+                "<p style='margin: 0.1rem 0;'>Capstone Project</p>"
+                "<p style='margin: 0.25rem 0 0;'>Member 1: Document Ingestion & Metadata Pipeline</p>"
+                "<p style='margin-top: 0.5rem;'>Built with<br>• Streamlit<br>• LangChain<br>• PyPDFLoader</p>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
     else:
         # Shown only if no document has been processed yet
         with st.container():
