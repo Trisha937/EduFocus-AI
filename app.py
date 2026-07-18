@@ -469,12 +469,25 @@ def main() -> None:
                     if submitted:
                         score = 0
                         total = len(st.session_state.quiz_data["questions"])
-                        
+
                         for i in range(total):
                             user_pick = st.session_state.get(f"q_{i}")
-                            if user_pick == correct_answers[i]:
+                            correct_ans = correct_answers[i]
+                            if user_pick == correct_ans:
                                 score += 1
-                        
+                                st.success(f"✅ Question {i+1}: Correct! You selected {user_pick}.")
+                            else:
+                                # Incorrect answer formatting
+                                with st.error(f"❌ Question {i+1}: Incorrect"):
+                                    st.markdown(f"**Question:** {st.session_state.quiz_data['questions'][i]['question']}")
+                                    options = st.session_state.quiz_data["questions"][i]["options"]
+                                    user_label = f"{user_pick}) {options[ord(user_pick)-65]}" if user_pick else "No answer"
+                                    correct_label = f"{correct_ans}) {options[ord(correct_ans)-65]}"
+                                    st.markdown(f"**Your Selection:** :red[{user_label}]")
+                                    st.markdown(f"**Correct Answer:** :green[{correct_label}]")
+                                    if 'explanation' in st.session_state.quiz_data["questions"][i]:
+                                        st.info(st.session_state.quiz_data["questions"][i]["explanation"])
+
                         st.success(f"Quiz Evaluation Complete! Your score: {score}/{total}")
 
             st.divider()
