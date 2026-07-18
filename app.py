@@ -1,8 +1,13 @@
 import pickle
+import json
+from dotenv import load_dotenv
+import os
+load_dotenv()  # This loads the environment variable from the .env file
 from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+from groq import Groq
 
 from utils.chat_engine import get_page_citations, stream_chat_response
 from utils.chat_memory import add_message
@@ -367,7 +372,7 @@ def main() -> None:
             st.markdown("- ✅ Statistics Generated")
             st.markdown("- ✅ Chat Module Connected")
 
-        # ============================================================================
+# ============================================================================
 # QUIZ DASHBOARD
 # ============================================================================
 
@@ -395,12 +400,43 @@ def main() -> None:
                         # Retrieve context for quiz generation
                         quiz_context, _ = retrieve_context_with_citations(
                             "Generate questions covering main concepts",
-                            st.session_state.vector_db
+                            st.session_state.vector_db,
                         )
 
                         if quiz_context:
                             quiz_prompt = format_quiz_prompt(quiz_context, 5)
-                            st.info("Quiz prompt prepared. Connect to Groq llama-3.3-70b-versatile for generation.")
+
+                            try:
+                                # Initialize Groq Client
+                                client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+                                # Request structured JSON payload matching your UI format
+                                completion = client.chat.completions.create(
+                                    model="llama-3.3-70b-versatile",
+                                    messages=[
+                                        {
+                                            "role": "system",
+                                            "content": (
+                                                "You are an evaluator. You must output raw JSON ONLY. "
+                                                "Follow this schema precisely: {\"questions\": [{\"question\": \"...\", "
+                                                "\"options\": [\"Ans A\", \"Ans B\", \"Ans C\", \"Ans D\"], "
+                                                "\"answer\": \"A\"}]}"
+                                            ),
+                                        },
+                                        {"role": "user", "content": quiz_prompt},
+                                    ],
+                                    temperature=0.3,
+                                    response_format={"type": "json_object"},
+                                )
+
+                                # Parse out JSON and store into session state
+                                parsed_quiz = json.loads(completion.choices[0].message.content)
+                                st.session_state.quiz_data = parsed_quiz
+                                st.session_state.quiz_generated = True
+                                st.rerun()
+
+                            except Exception as exc:
+                                st.error(f"Failed to generate quiz from Groq: {exc}")
                         else:
                             st.warning("Could not generate quiz - no document context available.")
                 else:
@@ -409,12 +445,14 @@ def main() -> None:
         # Display quiz questions if available
         if st.session_state.quiz_data.get("questions"):
             with st.form("quiz_answers_form"):
+                correct_answers = {}
                 for i, q in enumerate(st.session_state.quiz_data["questions"]):
                     st.markdown(f"**Question {i+1}:** {q['question']}")
+                    correct_answers[i] = q.get('answer', 'A')
 
                     # Radio buttons for options
                     answer_key = f"q_{i}"
-                    selected = st.radio(
+                    st.radio(
                         f"Select answer for Q{i+1}",
                         options=["A", "B", "C", "D"],
                         format_func=lambda x: f"{x}) {q['options'][ord(x)-65]}",
@@ -424,7 +462,15 @@ def main() -> None:
 
                 submitted = st.form_submit_button("Check Answers")
                 if submitted:
-                    st.success("Answers submitted! (Scoring logic to be implemented)")
+                    score = 0
+                    total = len(st.session_state.quiz_data["questions"])
+                    
+                    for i in range(total):
+                        user_pick = st.session_state.get(f"q_{i}")
+                        if user_pick == correct_answers[i]:
+                            score += 1
+                    
+                    st.success(f"Quiz Evaluation Complete! Your score: {score}/{total}")
 
         st.divider()
         st.markdown("## 🔍 Semantic Document Search")
