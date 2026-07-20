@@ -47,10 +47,10 @@ EduFocus AI is engineered entirely with high-performance, **100% free and open-s
 │ Streamlit UI    │ ◄──── │ Groq Cloud Stream  │ ◄──── ┌──────────────────────┐
 │  (Chat + Quiz)  │       │ (Llama-3.1 / 70B)  │       │  Local FAISS Index   │
 └─────────────────┘       └────────────────────┘       └──────────────────────┘
+```
 
 ## 📁 Repository Structure
 
-```markdown
 ```text
 EduFocus-AI/
 ├── 📄 app.py                      # Main Streamlit UI entry point
@@ -68,7 +68,7 @@ EduFocus-AI/
 ├── 📂 faiss_db/                   # Local vector index storage
 ├── 📄 requirements.txt            # Python dependencies
 └── 🔒 .env                        # Environment variables (API key)
-
+```
 
 ## 🚀 Quick Start Guide
 
