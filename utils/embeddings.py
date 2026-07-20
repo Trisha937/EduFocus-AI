@@ -1,4 +1,4 @@
-"""Local embedding utilities for EduFocus AI.
+"""Local embedding utilities for EduFocus.
 
 Uses HuggingFace's sentence-transformers/all-MiniLM-L6-v2 model running locally
 to avoid cloud embedding rate limits and costs.

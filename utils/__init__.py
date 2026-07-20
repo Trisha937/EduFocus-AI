@@ -1,4 +1,4 @@
-"""Utility package for EduFocus AI.
+"""Utility package for EduFocus.
 
 Exported modules:
 - loader: PDF loading utilities (Sub-Group A)

@@ -1,4 +1,4 @@
-"""PDF loading utilities for EduFocus AI."""
+"""PDF loading utilities for EduFocus."""
 
 from pathlib import Path
 from typing import Any

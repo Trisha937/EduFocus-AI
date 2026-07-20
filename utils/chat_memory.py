@@ -1,4 +1,4 @@
-"""Chat memory management for EduFocus AI.
+"""Chat memory management for EduFocus.
 
 Implements a 3-turn sliding window chat history to maintain dialogue context
 without overwhelming the model with long conversations.

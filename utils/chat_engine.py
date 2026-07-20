@@ -1,4 +1,4 @@
-"""Chat engine for EduFocus AI.
+"""Chat engine for EduFocus.
 
 Integrates FAISS retrieval with Groq streaming for conversational RAG.
 Uses Llama-3.1-8b-instant for fast, streamed chat responses.

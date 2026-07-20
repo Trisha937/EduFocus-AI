@@ -1,4 +1,4 @@
-"""FAISS vector store utilities for EduFocus AI.
+"""FAISS vector store utilities for EduFocus.
 
 Local FAISS (CPU) indexing for similarity search with preserved metadata.
 """

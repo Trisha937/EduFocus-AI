@@ -1,4 +1,4 @@
-"""System prompts for EduFocus AI.
+"""System prompts for EduFocus.
 
 This module contains persona configurations and quiz generation prompts
 for adaptive educational responses. Track 1 implements adaptive prompts
