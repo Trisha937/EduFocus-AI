@@ -312,6 +312,9 @@ def main() -> None:
             for message in st.session_state.chat_messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
+                    # Display persistent citations for assistant messages
+                    if message["role"] == "assistant" and message.get("citations"):
+                        st.caption(f"Sources: Pages {', '.join(map(str, message['citations']))}")
 
             if st.session_state.vector_store is None:
                 st.info("The chat index is not available yet. The document was processed, but the embedding/indexing step could not be completed.")
@@ -350,12 +353,14 @@ def main() -> None:
 
                         response_placeholder.markdown(full_response)
                         citations = get_page_citations(retrieved_chunks)
-                        if citations:
-                            st.caption(f"Sources: Pages {', '.join(map(str, citations))}")
 
                         st.session_state.chat_history = add_message(st.session_state.chat_history, "human", prompt)
                         st.session_state.chat_history = add_message(st.session_state.chat_history, "ai", full_response)
-                        st.session_state.chat_messages.append({"role": "assistant", "content": full_response})
+                        st.session_state.chat_messages.append({"role": "assistant", "content": full_response, "citations": citations})
+
+                        # Display inline citation (appears below response)
+                        if citations:
+                            st.caption(f"Sources: Pages {', '.join(map(str, citations))}")
                     except Exception as exc:
                         error_response = f"I could not generate a response right now: {exc}"
                         st.session_state.chat_messages.append({"role": "assistant", "content": error_response})

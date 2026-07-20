@@ -161,7 +161,7 @@ def parse_quiz_response(response: str) -> dict:
 
 
 # ============================================================================
-# TRACK 2 - CONTEXT FORMATTING (uses retrieved chunks)
+# CONTEXT FORMATTING (uses retrieved chunks)
 # ============================================================================
 
 def format_context_with_citations(chunks: list, source_file: str) -> str:
