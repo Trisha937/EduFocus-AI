@@ -19,20 +19,17 @@ from .prompts import format_context_with_citations, extract_unique_pages
 from .chat_engine import get_groq_chat_model, stream_chat_response, get_page_citations
 
 __all__ = [
-    # Sub-Group A - Document Ingestion
     "get_document_info",
     "load_pdf",
     "average_chunk_size",
     "chunk_statistics",
     "split_document",
-    # Track 2 - Embeddings & Vector Store
     "get_embeddings_model",
     "embed_chunks",
     "create_vector_store",
     "save_vector_store",
     "load_vector_store",
     "retrieve_similar_chunks",
-    # Track 2 - Chat & Memory
     "format_chat_history",
     "slice_sliding_history",
     "add_message",

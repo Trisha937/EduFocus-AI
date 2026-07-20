@@ -11,7 +11,7 @@ Designed to adapt dynamically to a student's technical proficiency, EduFocus AI 
 1️⃣🧠 **Adaptive Learning Modes:**
   * **Beginner Tier:** Simplifies complex concepts using relatable analogies, intuitive breakdowns, and accessible language.
   * **Intermediate Tier:** Delivers precise, technical, and academically rigorous explanations suited for advanced study.
-  
+
 2️⃣📚 **Verifiable Source Citations:** Every response extracts and displays exact page numbers directly from the uploaded PDF document (`[Source: file.pdf, Page X]`).
 
 
@@ -38,37 +38,36 @@ EduFocus AI is engineered entirely with high-performance, **100% free and open-s
 | **Vector DB** | Local Storage | [![FAISS](https://img.shields.io/badge/FAISS-CPU-green?style=flat-square)](https://github.com/facebookresearch/faiss) | Binary vector index stored locally for instant similarity search without cloud DB overhead |
 | **Inference** | LLM Cloud API | [![Groq](https://img.shields.io/badge/Groq-Cloud-orange?style=flat-square)](https://groq.com/) | • `llama-3.1-8b-instant`: Ultra-fast streamed chat (<2.5s latency)<br>• `llama-3.3-70b-versatile`: Complex quiz generation |
 
-
-
- ┌────────────────┐       ┌───────────────────┐       ┌──────────────────────┐
- │  PDF Uploads   │ ────► │  PyPDF + Chunking │ ────► │ sentence-transformer │
- └────────────────┘       └───────────────────┘       └──────────┬───────────┘
-                                                                 │
- ┌────────────────┐       ┌───────────────────┐                  ▼
- │ Streamlit UI   │ ◄──── │ Groq Cloud Stream │ ◄────  ┌─────────────────────┐
- │ (Chat + Quiz)  │       │ (Llama-3.1 / 70B) │        │  Local FAISS Index  │
- └────────────────┘       └───────────────────┘        └─────────────────────┘
-
+```text
+┌─────────────────┐       ┌────────────────────┐       ┌──────────────────────┐
+│   PDF Uploads   │ ────► │ PyPDF + Chunking   │ ────► │ sentence-transformer │
+└─────────────────┘       └────────────────────┘       └──────────┬───────────┘
+                                                                  │
+┌─────────────────┐       ┌────────────────────┐                  ▼
+│ Streamlit UI    │ ◄──── │ Groq Cloud Stream  │ ◄──── ┌──────────────────────┐
+│  (Chat + Quiz)  │       │ (Llama-3.1 / 70B)  │       │  Local FAISS Index   │
+└─────────────────┘       └────────────────────┘       └──────────────────────┘
 
 ## 📁 Repository Structure
 
+```markdown
+```text
 EduFocus-AI/
- ├── 📄 app.py                      # Main Streamlit UI entry point
- ├── 📂 utils/
- │    ├── ⚙️ loader.py               # Document loading via PyPDFLoader
- │    ├── ✂️ splitter.py             # Text chunking (1000 chars, 200 overlap)
- │    ├── 🧮 embeddings.py           # CPU sentence-transformer model
- │    ├── 🗄️ vector_store.py         # FAISS similarity search utilities
- │    ├── 🧠 chat_memory.py          # 3-turn sliding window history logic
- │    ├── 🚀 chat_engine.py          # Groq streaming & citation extraction
- │    └── 📝 prompts.py             # Adaptive system prompts & quiz formatters
- ├── 📂 database/
- │    ├── 📥 ingestion.py            # Document processing pipeline
- │    └── 💾 vector_store.py         # Persistence wrappers
- ├── 📂 faiss_db/                   # Local vector index storage
- ├── 📄 requirements.txt            # Python dependencies
- └── 🔒 .env                        # Environment variables (API key)
-
+├── 📄 app.py                      # Main Streamlit UI entry point
+├── 📂 utils/
+│   ├── ⚙️ loader.py               # Document loading via PyPDFLoader
+│   ├── ✂️ splitter.py             # Text chunking (1000 chars, 200 overlap)
+│   ├── 🧮 embeddings.py           # CPU sentence-transformer model
+│   ├── 🗄️ vector_store.py         # FAISS similarity search utilities
+│   ├── 🧠 chat_memory.py          # 3-turn sliding window history logic
+│   ├── 🚀 chat_engine.py          # Groq streaming & citation extraction
+│   └── 📝 prompts.py             # Adaptive system prompts & quiz formatters
+├── 📂 database/
+│   ├── 📥 ingestion.py            # Document processing pipeline
+│   └── 💾 vector_store.py         # Persistence wrappers
+├── 📂 faiss_db/                   # Local vector index storage
+├── 📄 requirements.txt            # Python dependencies
+└── 🔒 .env                        # Environment variables (API key)
 
 
 ## 🚀 Quick Start Guide
