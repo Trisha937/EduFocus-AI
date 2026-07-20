@@ -70,31 +70,61 @@ EduFocus-AI/
 └── 🔒 .env                        # Environment variables (API key)
 ```
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start
 
-1️⃣ Clone & Navigate
-git clone [https://github.com/Trisha937/EduFocus-AI.git](https://github.com/Trisha937/EduFocus-AI.git)
+### 1️⃣ Clone the Repository
+
+```bash
+git clone https://github.com/Trisha937/EduFocus-AI.git
 cd EduFocus-AI
+```
 
-2️⃣ Set Up Environment
-# On macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
+---
 
-# On Windows
+### 2️⃣ Set Up a Virtual Environment
+
+**Windows**
+
+```bash
 python -m venv venv
 venv\Scripts\activate
+```
 
-3️⃣ Install Dependencies
+**macOS / Linux**
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+---
+
+### 3️⃣ Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-4️⃣ Configure Groq API Key
-Get your free key from the Groq Console. Create a .env file in the root folder:
+---
 
-Code snippet
+### 4️⃣ Configure Environment Variables
+
+Create a `.env` file in the project root and add your Groq API key:
+
+```env
 GROQ_API_KEY=your_groq_api_key_here
+```
 
-5️⃣ Launch the Application
+---
+
+### 5️⃣ Launch the Application
+
+```bash
 streamlit run app.py
+```
 
-🌐 Local Access: Open your browser to http://localhost:8501 to start learning!
+---
+
+🌐 **Application URL:** http://localhost:8501
+
+Open the above URL in your browser after the Streamlit server starts.
