@@ -8,21 +8,29 @@ Designed to adapt dynamically to a student's technical proficiency, EduFocus AI 
 
 ## ✨ Key Features
 
-1️⃣🧠 **Adaptive Learning Modes:**
-  * **Beginner Tier:** Simplifies complex concepts using relatable analogies, intuitive breakdowns, and accessible language.
-  * **Intermediate Tier:** Delivers precise, technical, and academically rigorous explanations suited for advanced study.
+- 🧠 **Adaptive Learning Modes**
+  - **Beginner Mode:** Explains complex concepts using simple language, relatable analogies, and intuitive examples.
+  - **Intermediate Mode:** Provides technically accurate, academically rigorous explanations for deeper understanding.
 
-2️⃣📚 **Verifiable Source Citations:** Every response extracts and displays exact page numbers directly from the uploaded PDF document (`[Source: file.pdf, Page X]`).
+- 📚 **Grounded Page-Level Citations**
+  - Every response includes verifiable citations in the format:
+    ```
+    [Source: document.pdf, Page X]
+    ```
+  - Enables students to validate answers directly from the uploaded study material.
 
+- 🛡️ **Hallucination-Resistant Responses**
+  - Strict prompt engineering ensures answers are generated only from the retrieved document context.
+  - If the required information is unavailable, the assistant clearly states that it is not present in the uploaded material.
 
-3️⃣🛡️ **Zero-Hallucination Guardrails:** Enforces strict system-prompt boundaries to ensure answers are strictly derived from the provided document context.
+- ⚡ **Real-Time AI Streaming**
+  - Powered by **Groq's `llama-3.1-8b-instant`** for low-latency, token-by-token response generation using Streamlit streaming.
 
-4️⃣⚡ **High-Speed Real-Time Streaming:** Powered by Groq's high-velocity inference engine (`llama-3.1-8b-instant`) to stream responses token-by-token with sub-2.5-second latency.
+- 📝 **Automatic Quiz Generation**
+  - Uses **`llama-3.3-70b-versatile`** to generate contextual **5-question MCQ quizzes** directly from the uploaded academic content.
 
-5️⃣📝 **Automated Evaluation Quizzes:** Leverages `llama-3.3-70b-versatile` to dynamically compile 5-question multiple-choice quizzes directly from uploaded textbook content.
-
-
-6️⃣🔄 **Smart Conversational Memory:** Implements a rolling 3-turn history window (last 6 messages) to maintain contextual coherence without exceeding token windows.
+- 🔄 **Context-Aware Chat Memory**
+  - Maintains a rolling **3-turn conversation history (6 messages)** to preserve context while keeping token usage efficient.
 
 ---
 
