@@ -1,6 +1,6 @@
-# 🎓 EduFocus AI: Adaptive Academic RAG Assistant
+# 🎓 EduFocus: Adaptive Academic RAG Assistant
 
-**EduFocus AI** is an intelligent, grounded Retrieval-Augmented Generation (RAG) educational platform that converts static academic materials (PDFs) into an interactive, personalized learning environment. 
+**EduFocus** is an intelligent, grounded Retrieval-Augmented Generation (RAG) educational platform that converts static academic materials (PDFs) into an interactive, personalized learning environment. 
 
 Designed to adapt dynamically to a student's technical proficiency, EduFocus AI provides level-tailored explanations, verifiable page-level citations, zero-hallucination guardrails, and automated self-assessment quizzes.
 
@@ -36,7 +36,7 @@ Designed to adapt dynamically to a student's technical proficiency, EduFocus AI 
 
 ## 🛠️ System Architecture & Tech Stack
 
-EduFocus AI is engineered entirely with high-performance, **100% free and open-source** technologies:
+EduFocus is engineered entirely with high-performance, **100% free and open-source** technologies:
 
 | Layer | Component | Technology | Role & Architecture |
 | :---: | :--- | :--- | :--- |
@@ -60,7 +60,7 @@ EduFocus AI is engineered entirely with high-performance, **100% free and open-s
 ## 📁 Repository Structure
 
 ```text
-EduFocus-AI/
+EduFocus/
 ├── 📄 app.py                      # Main Streamlit UI entry point
 ├── 📂 utils/
 │   ├── ⚙️ loader.py               # Document loading via PyPDFLoader
@@ -83,8 +83,8 @@ EduFocus-AI/
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/Trisha937/EduFocus-AI.git
-cd EduFocus-AI
+git clone https://github.com/Trisha937/EduFocus.git
+cd EduFocus
 ```
 
 ---

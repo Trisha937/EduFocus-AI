@@ -1,4 +1,4 @@
-"""Document chunking utilities for EduFocus AI."""
+"""Document chunking utilities for EduFocus."""
 
 from typing import Any
 
