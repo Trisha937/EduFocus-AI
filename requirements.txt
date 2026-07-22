@@ -7,3 +7,6 @@ faiss-cpu
 sentence-transformers
 python-dotenv
 langchain-huggingface
+datasets
+openai
+ragas
